@@ -1,0 +1,99 @@
+version: 2.1
+
+description: |
+  Install and configure the Linode command-line interface (linode-cli)
+
+executors:
+  default:
+    description: |
+      The Debian-based Docker container to use when
+      installing/configuring the Linode CLI
+
+    parameters:
+      python-version:
+        type: string
+        default: "2.7"
+
+      debian-release:
+        type: string
+        default: "stretch"
+
+    docker:
+      - image: circleci/python:<<parameters.python-version>>-<<parameters.debian-release>>
+
+commands:
+  install:
+    description: |
+      Install the Linode CLI via pip.
+
+    steps:
+      - run:
+          name: Install Linode CLI
+          command: |
+            export PIP=$(which pip pip3 | head -1)
+            if [[ -n $PIP ]]; then
+              if which sudo > /dev/null; then
+                sudo $PIP install linode-cli --upgrade
+              else
+                # This installs the AWS CLI to ~/.local/bin. Make sure that ~/.local/bin is in your $PATH.
+                $PIP install linode-cli --upgrade --user
+              fi
+            else
+              echo "Unable to install Linode CLI. Please install pip."
+              exit 1
+            fi
+  configure:
+    description: |
+      Configure and store Linode credentials
+
+    parameters:
+      # profile-name:
+      #   description: Profile name to be configured.
+      #   type: string
+      #   default: "default"
+
+      linode-personal-access-token:
+        description: |
+          Linode Personal Access Token 
+        type: env_var_name
+        default: LINODE_PERSONAL_ACCESS_TOKEN
+
+      linode-region:
+        description: |
+          Env var of Linode region to operate in
+          (defaults to LINODE_DEFAULT_REGION)
+        type: env_var_name
+        default: LINODE_DEFAULT_REGION
+
+      configure-default-region:
+        description: |
+          Some Linode actions don't require a region; set this to false if you do not want to store a default region
+        type: boolean
+        default: true
+
+    steps:
+      - run:
+          name: Configure AWS Access Key ID
+          command: |
+            aws configure set aws_access_key_id \
+            $<<parameters.aws-access-key-id>> \
+            --profile <<parameters.profile-name>>
+
+      - run:
+          name: Configure AWS Secret Access Key
+          command: |
+            aws configure set aws_secret_access_key \
+            $<<parameters.aws-secret-access-key>> \
+            --profile <<parameters.profile-name>>
+
+      - when:
+          condition: <<parameters.configure-default-region>>
+          steps:
+            - run:
+                name: Configure AWS default region
+                command: |
+                  aws configure set region $<<parameters.aws-region>> \
+                  --profile <<parameters.profile-name>>
+Orbs
+Orbs DocsOrb LicensingReport an Orb
+Copyright © 2019 Circle Internet Services, Inc., All Rights Reserved.
